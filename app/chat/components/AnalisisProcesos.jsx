@@ -54,7 +54,7 @@ export default function ModalInicio({ onComplete }) {
               </motion.h2>
 
               <Image
-                src="/GLYAI.png"
+                src="/logo2.png"
                 alt="Logo GLY-IA"
                 width={70}
                 height={70}
