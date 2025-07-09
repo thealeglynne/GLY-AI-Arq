@@ -53,7 +53,7 @@ export default function Home() {
     <>
       <Head>
         <title>GLYNNE – Automatización Empresarial con IA y Arquitectura Escalable</title>
-        <meta name="description" content="GLYNNE es una plataforma empresarial que permite integrar inteligencia artificial y automatización avanzada en cada proceso operativo. Diagnósticos inteligentes, orquestación con agentes IA, dashboards en tiempo real y más." />
+        <meta name="description" content="GLYNNE es una plataforma que permite integrar inteligencia artificial y automatización avanzada en cada proceso operativo. Diagnósticos inteligentes, orquestación con agentes IA, dashboards en tiempo real y más." />
         <meta name="keywords" content="GLYNNE, automatización empresarial, inteligencia artificial, RPA, BPA, integración, agentes IA, LangChain, Next.js, arquitectura escalable, orquestación, low-code, no-code, procesos empresariales, eficiencia operativa, Supabase, n8n" />
         <meta name="author" content="GLYNNE Tech" />
         <meta name="robots" content="index, follow" />

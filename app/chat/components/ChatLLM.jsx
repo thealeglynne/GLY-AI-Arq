@@ -308,7 +308,7 @@ export default function ChatConConfiguracion() {
             >
               <h2 className="text-lg font-bold mb-4">📘 Instrucciones de configuración</h2>
               <ul className="text-sm list-disc pl-5 space-y-2">
-                <li><strong>Temperatura:</strong> controla la creatividad del modelo. Valores bajos (0.2–0.4) generan respuestas más predecibles; valores altos (0.7–1) son más exploratorios.</li>
+                <li><strong>Temperatura:</strong> controla del modelo. Valores bajos (0.2–0.4) generan respuestas más predecibles; valores altos (0.7–1) son más exploratorios.</li>
                 <li><strong>Rol del agente:</strong> define el enfoque con el que GLY-IA responde. Ej: un Auditor analiza eficiencia, un Orquestador propone arquitecturas, etc.</li>
                 <li>Los demás parámetros han sido ajustados automáticamente para un rendimiento óptimo.</li>
               </ul>
