@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaSlidersH, FaUserSecret, FaLaptopCode, FaChartLine, FaRobot,
-  FaBalanceScale, FaProjectDiagram, FaFeatherAlt, FaInfoCircle
+  FaBalanceScale, FaProjectDiagram, FaFeatherAlt, FaInfoCircle,
+  FaTimes, FaPaperPlane
 } from 'react-icons/fa';
 import Image from 'next/image';
 
@@ -32,6 +33,7 @@ export default function ChatConConfiguracion() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showInstrucciones, setShowInstrucciones] = useState(false);
   const [windowWidth, setWindowWidth] = useState(1024);
+  const [isLoading, setIsLoading] = useState(false);
   const [config, setConfig] = useState({
     temperatura: 0.7,
     rolAgente: 'auditor',
@@ -42,6 +44,7 @@ export default function ChatConConfiguracion() {
 
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gly-ai-brain.onrender.com';
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -63,19 +66,58 @@ export default function ChatConConfiguracion() {
         }]);
       }, 500);
     }
-  }, [messages]);
+  }, []);
 
   const update = (key, value) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { from: 'user', text: input }]);
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = { from: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { from: 'ia', text: '🤖 Procesando tu mensaje con la configuración actual del modelo...' }]);
-    }, 1000);
+    setIsLoading(true);
+    
+    try {
+      // Mapear roles frontend a backend
+      const rolesBackend = {
+        'auditor': 'Auditor',
+        'desarrollador': 'Desarrollador',
+        'consultor': 'Gestor de Negocios',
+        'orquestador': 'Desarrollador',
+        'analista': 'Auditor',
+        'arquitecto': 'Desarrollador'
+      };
+
+      const response = await fetch(`${API_URL}/gpt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: input,
+          rol: rolesBackend[config.rolAgente] || 'Auditor',
+          temperatura: config.temperatura,
+          estilo: 'Formal'
+        })
+      });
+
+      if (!response.ok) throw new Error('Error en la respuesta del servidor');
+      
+      const data = await response.json();
+      setMessages(prev => [...prev, { from: 'ia', text: data.respuesta }]);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { 
+        from: 'ia', 
+        text: '⚠️ Error al conectar con el servidor. Por favor intenta nuevamente.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const SidebarContent = () => (
@@ -85,7 +127,18 @@ export default function ChatConConfiguracion() {
       transition={{ duration: 0.4 }}
       className="space-y-6"
     >
-      <h2 className="text-xl font-bold text-center"> Configurar GLY-IA</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">Configurar GLY-IA</h2>
+        {isMobile && (
+          <button 
+            onClick={() => setMenuOpen(false)}
+            className="p-2 rounded-full hover:bg-gray-200"
+          >
+            <FaTimes />
+          </button>
+        )}
+      </div>
+      
       <div className="flex justify-center">
         <Image src="/logo2.png" alt="Modelo IA" width={50} height={50} />
       </div>
@@ -124,7 +177,7 @@ export default function ChatConConfiguracion() {
           onChange={(e) => update('temperatura', parseFloat(e.target.value))}
           className="w-full accent-black"
         />
-        <div className="text-xs text-center text-gray-500">{config.temperatura}</div>
+        <div className="text-xs text-center text-gray-500">{config.temperatura.toFixed(2)}</div>
       </div>
 
       <motion.div
@@ -214,7 +267,10 @@ export default function ChatConConfiguracion() {
             <motion.button
               key={i}
               whileHover={{ scale: 1.02 }}
-              onClick={() => setInput(q)}
+              onClick={() => {
+                setInput(q);
+                if (isMobile) setMenuOpen(false);
+              }}
               className="text-left p-2 border rounded-md hover:bg-gray-200 transition"
             >
               {q}
@@ -226,7 +282,7 @@ export default function ChatConConfiguracion() {
   );
 
   return (
-    <div className="flex h-screen relative">
+    <div className="flex h-screen relative bg-gray-50">
       {isMobile && (
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -243,15 +299,15 @@ export default function ChatConConfiguracion() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="w-full sm:max-w-sm bg-white border-r border-gray-200 p-4 flex flex-col justify-between overflow-y-auto z-40 absolute sm:static"
+            className="w-full sm:max-w-sm bg-white border-r border-gray-200 p-4 flex flex-col justify-between overflow-y-auto z-40 absolute sm:relative h-full"
           >
-            {SidebarContent()}
+            <SidebarContent />
           </motion.aside>
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col flex-1 bg-gray-50 h-full ml-0 sm:ml-0">
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex flex-col flex-1 h-full ml-0 sm:ml-0">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -280,14 +336,18 @@ export default function ChatConConfiguracion() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none"
+            className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
             placeholder="Escribe tu mensaje..."
+            disabled={isLoading}
           />
           <button
             onClick={handleSend}
-            className="px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-900"
+            disabled={isLoading}
+            className={`px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-900 transition ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            Enviar
+            {isLoading ? 'Enviando...' : <FaPaperPlane />}
           </button>
         </div>
       </div>
@@ -295,29 +355,40 @@ export default function ChatConConfiguracion() {
       <AnimatePresence>
         {showInstrucciones && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center"
+            className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={() => setShowInstrucciones(false)}
           >
             <motion.div
               className="bg-white rounded-xl p-6 w-full max-w-lg"
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.8 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-lg font-bold mb-4">📘 Instrucciones de configuración</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">📘 Instrucciones de configuración</h2>
+                <button 
+                  onClick={() => setShowInstrucciones(false)}
+                  className="p-1 rounded-full hover:bg-gray-200"
+                >
+                  <FaTimes />
+                </button>
+              </div>
               <ul className="text-sm list-disc pl-5 space-y-2">
-                <li><strong>Temperatura:</strong> controla del modelo. Valores bajos (0.2–0.4) generan respuestas más predecibles; valores altos (0.7–1) son más exploratorios.</li>
+                <li><strong>Temperatura:</strong> controla la creatividad del modelo. Valores bajos (0.2–0.4) generan respuestas más predecibles; valores altos (0.7–1) son más exploratorios.</li>
                 <li><strong>Rol del agente:</strong> define el enfoque con el que GLY-IA responde. Ej: un Auditor analiza eficiencia, un Orquestador propone arquitecturas, etc.</li>
-                <li>Los demás parámetros han sido ajustados automáticamente para un rendimiento óptimo.</li>
+                <li>Los demás parámetros ayudan a contextualizar mejor las respuestas según tu empresa.</li>
+                <li>Puedes usar las preguntas sugeridas como punto de partida.</li>
               </ul>
               <div className="text-right mt-4">
                 <button
                   onClick={() => setShowInstrucciones(false)}
                   className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
                 >
-                  Cerrar
+                  Entendido
                 </button>
               </div>
             </motion.div>
