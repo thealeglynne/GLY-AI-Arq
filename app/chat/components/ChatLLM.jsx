@@ -74,14 +74,13 @@ export default function ChatConConfiguracion() {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-    
+
     const userMessage = { from: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    
+
     try {
-      // Mapear roles frontend a backend
       const rolesBackend = {
         'auditor': 'Auditor',
         'desarrollador': 'Desarrollador',
@@ -95,6 +94,7 @@ export default function ChatConConfiguracion() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           query: input,
@@ -104,16 +104,17 @@ export default function ChatConConfiguracion() {
         })
       });
 
-      if (!response.ok) throw new Error('Error en la respuesta del servidor');
-      
-      const data = await response.json();
+      const text = await response.text();
+      if (!response.ok) throw new Error(text);
+
+      const data = JSON.parse(text);
       setMessages(prev => [...prev, { from: 'ia', text: data.respuesta }]);
-      
+
     } catch (error) {
       console.error('Error:', error);
-      setMessages(prev => [...prev, { 
-        from: 'ia', 
-        text: '⚠️ Error al conectar con el servidor. Por favor intenta nuevamente.' 
+      setMessages(prev => [...prev, {
+        from: 'ia',
+        text: '⚠️ Error al conectar con el servidor. Por favor intenta nuevamente.'
       }]);
     } finally {
       setIsLoading(false);
