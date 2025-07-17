@@ -44,7 +44,7 @@ export default function ChatConConfiguracion() {
 
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://gly-ai-brain.onrender.com';
+  const API_URL = 'https://gly-ai-brain.onrender.com'; // URL directa del endpoint
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -90,37 +90,50 @@ export default function ChatConConfiguracion() {
         'arquitecto': 'Desarrollador'
       };
 
+      // Estructura de datos optimizada para el endpoint
+      const requestData = {
+        query: input,
+        rol: rolesBackend[config.rolAgente] || 'Auditor',
+        temperatura: config.temperatura,
+        estilo: 'Formal',
+        config: {
+          sector: config.sector,
+          modalidad: config.modalidad,
+          departamentos: config.departamentos.join(', ') // Convertir array a string
+        }
+      };
+
       const response = await fetch(`${API_URL}/gpt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          query: input,
-          rol: rolesBackend[config.rolAgente] || 'Auditor',
-          temperatura: config.temperatura,
-          estilo: 'Formal'
-        })
+        body: JSON.stringify(requestData),
+        timeout: 60000 // Timeout de 60 segundos para Render free tier
       });
 
-      const text = await response.text();
-      if (!response.ok) throw new Error(text);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      const data = JSON.parse(text);
-      setMessages(prev => [...prev, { from: 'ia', text: data.respuesta }]);
+      const data = await response.json();
+      
+      // Manejar posibles formatos de respuesta
+      const respuesta = data.respuesta || data.message || "No se pudo procesar la respuesta";
+      setMessages(prev => [...prev, { from: 'ia', text: respuesta }]);
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error al conectar con GLY-ai-Brain:', error);
       setMessages(prev => [...prev, {
         from: 'ia',
-        text: '⚠️ Error al conectar con el servidor. Por favor intenta nuevamente.'
+        text: '⚠️ Lo siento, estoy teniendo problemas para conectarme. Por favor intenta nuevamente en unos momentos. (El servicio gratuito puede tardar hasta 50 segundos en iniciar)'
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Resto del código permanece igual...
   const SidebarContent = () => (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -383,6 +396,7 @@ export default function ChatConConfiguracion() {
                 <li><strong>Rol del agente:</strong> define el enfoque con el que GLY-IA responde. Ej: un Auditor analiza eficiencia, un Orquestador propone arquitecturas, etc.</li>
                 <li>Los demás parámetros ayudan a contextualizar mejor las respuestas según tu empresa.</li>
                 <li>Puedes usar las preguntas sugeridas como punto de partida.</li>
+                <li><strong>Nota:</strong> El servicio gratuito puede tardar hasta 50 segundos en responder la primera vez debido a que el servidor se "duerme" por inactividad.</li>
               </ul>
               <div className="text-right mt-4">
                 <button

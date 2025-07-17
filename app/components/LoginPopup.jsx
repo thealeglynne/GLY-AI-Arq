@@ -1,7 +1,7 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
@@ -42,7 +42,7 @@ export function LoginPopup({ visible, onClose }) {
     };
 
     checkAndInsertUser();
-  }, []);
+  }, [router]);
 
   return (
     <AnimatePresence>
