@@ -24,7 +24,7 @@ export default function Header() {
         src="/logo.png"
         alt="Logo"
         className="h-10 sm:h-12 md:h-14 cursor-pointer"
-        onClick={() => (window.location.href = 'https://glynne-ia-6rjd.vercel.app/')}
+        onClick={() => (window.location.href = 'https://www.glynneai.com/')}
       />
     </header>
   );
