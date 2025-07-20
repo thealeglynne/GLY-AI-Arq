@@ -1,3 +1,4 @@
+// app/components/LoginPopup.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -17,7 +18,10 @@ export function LoginPopup({ visible, onClose }) {
       },
     });
 
-    if (error) console.error('Error al iniciar sesión con Google:', error.message);
+    if (error) {
+      console.error('Error al iniciar sesión con Google:', error.message);
+      alert('Error al iniciar sesión: ' + error.message);
+    }
   };
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export function LoginPopup({ visible, onClose }) {
               onClick={onClose}
               className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
             >
-              &times;
+              ×
             </button>
 
             <h3 className="text-base font-bold text-gray-800 text-center mb-2">Empieza ahora</h3>

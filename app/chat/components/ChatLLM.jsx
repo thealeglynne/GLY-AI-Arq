@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
+import { getCurrentUser, subscribeToAuthState } from '../../lib/supabaseClient';
 import GuardarAuditoria from '../components/saveChat';
+
 
 export default function ChatConConfiguracion() {
   const [input, setInput] = useState('');
@@ -15,6 +17,8 @@ export default function ChatConConfiguracion() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [exitPromptVisible, setExitPromptVisible] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoginPopupVisible, setIsLoginPopupVisible] = useState(false);
 
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
@@ -33,6 +37,27 @@ export default function ChatConConfiguracion() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Sync authentication state
+  useEffect(() => {
+    const fetchUser = async () => {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      if (!currentUser) {
+        setIsLoginPopupVisible(true); // Show login popup if no user
+      }
+    };
+    fetchUser();
+
+    const subscription = subscribeToAuthState((event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setIsLoginPopupVisible(false); // Hide login popup on successful login
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Initial message
   useEffect(() => {
@@ -253,12 +278,23 @@ export default function ChatConConfiguracion() {
                 {auditContent}
               </div>
               <div className="mt-6 flex justify-end gap-4">
-                <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
+                {user ? (
+                  <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
+                ) : (
+                  <button
+                    onClick={() => setIsLoginPopupVisible(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Iniciar Sesión para Guardar
+                  </button>
+                )}
                 <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">Cerrar</button>
               </div>
             </motion.div>
           </div>
         )}
+
+
 
         {/* Exit Prompt Modal */}
         {exitPromptVisible && (
