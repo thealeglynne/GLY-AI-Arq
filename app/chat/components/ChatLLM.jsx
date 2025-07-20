@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import {  FaPaperPlane, FaTimes } from 'react-icons/fa';
+import { FaPaperPlane, FaTimes } from 'react-icons/fa';
+import GuardarAuditoria from '../components/saveChat';
 
 export default function ChatConConfiguracion() {
   const [input, setInput] = useState('');
@@ -20,7 +21,7 @@ export default function ChatConConfiguracion() {
   const API_URL = 'https://gly-ai-brain.onrender.com';
   const REQUEST_TIMEOUT = 30000;
 
-  // Detectar redimensionamiento
+  // Detect window resize
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     handleResize();
@@ -28,12 +29,12 @@ export default function ChatConConfiguracion() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Scroll al fondo
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mensaje inicial
+  // Initial message
   useEffect(() => {
     if (messages.length === 0) {
       const fetchInitialMessage = async () => {
@@ -76,7 +77,7 @@ export default function ChatConConfiguracion() {
     }
   }, []);
 
-  // ⚠️ PREVENCIÓN DE SALIDA ACCIDENTAL
+  // Prevent accidental exit
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (messages.length > 0) {
@@ -168,7 +169,7 @@ export default function ChatConConfiguracion() {
   return (
     <div className="flex items-center justify-center bg-white bg-opacity-70 relative h-screen">
       <div className="flex flex-col w-[85vw] max-w-6xl bg-white rounded-3xl shadow-2xl px-[4vw] py-[5vh] h-[90vh]">
-        {/* Mensajes */}
+        {/* Messages */}
         <div className="overflow-y-auto space-y-4 flex-1">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -213,7 +214,7 @@ export default function ChatConConfiguracion() {
           </div>
         </div>
 
-        {/* Modal Confirmación Auditoría */}
+        {/* Audit Confirmation Modal */}
         {isAlertOpen && (
           <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
             <motion.div
@@ -235,7 +236,7 @@ export default function ChatConConfiguracion() {
           </div>
         )}
 
-        {/* Modal Auditoría */}
+        {/* Audit Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
             <motion.div
@@ -251,14 +252,15 @@ export default function ChatConConfiguracion() {
               <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {auditContent}
               </div>
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-end gap-4">
+                <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
                 <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">Cerrar</button>
               </div>
             </motion.div>
           </div>
         )}
 
-        {/* MODAL DE SALIDA */}
+        {/* Exit Prompt Modal */}
         {exitPromptVisible && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000]">
             <motion.div
