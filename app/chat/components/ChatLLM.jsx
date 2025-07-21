@@ -294,8 +294,9 @@ export default function ChatConConfiguracion() {
             <button onClick={() => setIsAlertOpen(false)} className="absolute top-4 right-4 text-gray-600">
               <FaTimes size={20} />
             </button>
-            <h2 className="text-xl font-bold mb-4">Confirmar Generación</h2>
-            <p className="text-sm text-gray-700 mb-6">¿Deseas generar el informe técnico ahora?</p>
+            <h2 className="text-xl font-bold mb-4">¿Listo para generar tu informe técnico?</h2>
+            <p className="text-sm text-gray-700 mb-6">Cuanto más contexto compartas sobre tu empresa, mejor podrá GLY-AI analizar tus procesos, detectar oportunidades y proponer soluciones adaptadas a tu realidad.
+Este informe no es genérico: es el primer paso hacia tu transformación empresarial impulsada por IA.</p>
             <div className="flex justify-end gap-4">
               <button onClick={() => setIsAlertOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancelar</button>
               <button onClick={handleGenerateAudit} className="px-4 py-2 bg-black text-white rounded-lg">Generar</button>
