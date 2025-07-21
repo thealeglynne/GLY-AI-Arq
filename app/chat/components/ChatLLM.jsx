@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
 import { getCurrentUser, subscribeToAuthState } from '../../lib/supabaseClient';
 import GuardarAuditoria from '../components/saveChat';
-
+import ListaAuditorias from '../components/ListaAuditorias';
 
 export default function ChatConConfiguracion() {
   const [input, setInput] = useState('');
@@ -25,7 +25,6 @@ export default function ChatConConfiguracion() {
   const API_URL = 'https://gly-ai-brain.onrender.com';
   const REQUEST_TIMEOUT = 30000;
 
-  // Detect window resize
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     handleResize();
@@ -33,18 +32,16 @@ export default function ChatConConfiguracion() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Sync authentication state
   useEffect(() => {
     const fetchUser = async () => {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       if (!currentUser) {
-        setIsLoginPopupVisible(true); // Show login popup if no user
+        setIsLoginPopupVisible(true);
       }
     };
     fetchUser();
@@ -52,14 +49,13 @@ export default function ChatConConfiguracion() {
     const subscription = subscribeToAuthState((event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        setIsLoginPopupVisible(false); // Hide login popup on successful login
+        setIsLoginPopupVisible(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Initial message
   useEffect(() => {
     if (messages.length === 0) {
       const fetchInitialMessage = async () => {
@@ -102,7 +98,6 @@ export default function ChatConConfiguracion() {
     }
   }, []);
 
-  // Prevent accidental exit
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (messages.length > 0) {
@@ -192,145 +187,154 @@ export default function ChatConConfiguracion() {
   };
 
   return (
-    <div className="flex items-center justify-center bg-white bg-opacity-70 relative h-screen">
-      <div className="flex flex-col w-[85vw] max-w-6xl bg-white rounded-3xl shadow-2xl px-[4vw] py-[5vh] h-[90vh]">
-        {/* Messages */}
-        <div className="overflow-y-auto space-y-4 flex-1">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm shadow-sm leading-relaxed whitespace-pre-wrap
-                  ${msg.from === 'ia' ? 'bg-white text-gray-800 border border-gray-200' : 'bg-black text-white border border-black'}`}
-              >
-                {msg.text}
-              </motion.div>
-            </div>
-          ))}
-          {isLoading && (
-            <motion.div className="text-sm text-gray-600">Pensando...</motion.div>
-          )}
-          <div ref={messagesEndRef} />
+    <div className="w-screen h-screen flex items-center justify-center bg-white">
+      <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[90vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
+        
+        {/* Lista de Auditorías */}
+        <div className="hidden lg:block lg:w-[30%] h-full bg-white border-r border-gray-200 overflow-y-auto p-4">
+          <ListaAuditorias />
         </div>
-
-        {/* Input */}
-        <div className="mt-6">
-          <div className="flex items-center gap-3 border border-gray-300 bg-gray-50 rounded-full shadow-md p-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Escribe tu mensaje..."
-              className="flex-1 bg-transparent focus:outline-none text-sm"
-              disabled={isLoading}
-            />
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: isLoading ? 1 : 1.1 }}
-              onClick={handleSend}
-              disabled={isLoading}
-              className="text-white bg-black hover:bg-gray-900 rounded-full p-2 transition"
-            >
-              <FaPaperPlane size={16} />
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Audit Confirmation Modal */}
-        {isAlertOpen && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
-            >
-              <button onClick={() => setIsAlertOpen(false)} className="absolute top-4 right-4 text-gray-600">
-                <FaTimes size={20} />
-              </button>
-              <h2 className="text-xl font-bold mb-4">Confirmar Generación</h2>
-              <p className="text-sm text-gray-700 mb-6">¿Deseas generar el informe técnico ahora?</p>
-              <div className="flex justify-end gap-4">
-                <button onClick={() => setIsAlertOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancelar</button>
-                <button onClick={handleGenerateAudit} className="px-4 py-2 bg-black text-white rounded-lg">Generar</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Audit Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-3xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto p-6 relative"
-            >
-              <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-600">
-                <FaTimes size={20} />
-              </button>
-              <h2 className="text-2xl font-bold mb-4">Informe Técnico Consultivo</h2>
-              <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {auditContent}
-              </div>
-              <div className="mt-6 flex justify-end gap-4">
-                {user ? (
-                  <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
-                ) : (
-                  <button
-                    onClick={() => setIsLoginPopupVisible(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Iniciar Sesión para Guardar
-                  </button>
-                )}
-                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">Cerrar</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-
-
-        {/* Exit Prompt Modal */}
-        {exitPromptVisible && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000]">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
-            >
-              <button onClick={() => setExitPromptVisible(false)} className="absolute top-4 right-4 text-gray-600 hover:text-gray-800">
-                <FaTimes size={20} />
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-gray-800">¿Deseas salir?</h2>
-              <p className="text-gray-700 text-sm mb-6">
-                Estás a punto de abandonar esta sesión de auditoría. ¿Estás seguro?
-              </p>
-              <div className="flex justify-end gap-4">
-                <button onClick={() => setExitPromptVisible(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    setExitPromptVisible(false);
-                    window.removeEventListener('beforeunload', () => {});
-                    window.location.href = '/';
-                  }}
-                  className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900"
+  
+        {/* Chat principal */}
+        <div className="flex flex-col flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-white h-full">
+          {/* Mensajes */}
+          <div className="overflow-y-auto space-y-4 flex-1 pr-1">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`max-w-[90%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm shadow-md leading-relaxed whitespace-pre-wrap backdrop-blur-md
+                    ${msg.from === 'ia'
+                      ? 'bg-white/30 text-gray-800 border border-white/60'
+                      : 'bg-black/90 text-white border border-black/60'}`}
                 >
-                  Salir de la página
-                </button>
+                  {msg.text}
+                </motion.div>
               </div>
-            </motion.div>
+            ))}
+            {isLoading && (
+              <motion.div className="text-sm text-gray-500 px-2">Pensando...</motion.div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        )}
+  
+          {/* Input */}
+          <div className="mt-4 sm:mt-6">
+            <div className="flex items-center gap-2 sm:gap-3 border border-gray-300 bg-gray-50 rounded-full shadow-md p-2 sm:p-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 bg-transparent focus:outline-none text-sm text-black"
+                disabled={isLoading}
+              />
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: isLoading ? 1 : 1.1 }}
+                onClick={handleSend}
+                disabled={isLoading}
+                className="text-white bg-black hover:bg-gray-900 rounded-full p-2 transition"
+              >
+                <FaPaperPlane size={16} />
+              </motion.button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Audit Confirmation Modal */}
+      {isAlertOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
+          >
+            <button onClick={() => setIsAlertOpen(false)} className="absolute top-4 right-4 text-gray-600">
+              <FaTimes size={20} />
+            </button>
+            <h2 className="text-xl font-bold mb-4">Confirmar Generación</h2>
+            <p className="text-sm text-gray-700 mb-6">¿Deseas generar el informe técnico ahora?</p>
+            <div className="flex justify-end gap-4">
+              <button onClick={() => setIsAlertOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancelar</button>
+              <button onClick={handleGenerateAudit} className="px-4 py-2 bg-black text-white rounded-lg">Generar</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Audit Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-3xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto p-6 relative"
+          >
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-600">
+              <FaTimes size={20} />
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Informe Técnico Consultivo</h2>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {auditContent}
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+              {user ? (
+                <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
+              ) : (
+                <button
+                  onClick={() => setIsLoginPopupVisible(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Iniciar Sesión para Guardar
+                </button>
+              )}
+              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">Cerrar</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Exit Prompt Modal */}
+      {exitPromptVisible && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
+          >
+            <button onClick={() => setExitPromptVisible(false)} className="absolute top-4 right-4 text-gray-600 hover:text-gray-800">
+              <FaTimes size={20} />
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-gray-800">¿Deseas salir?</h2>
+            <p className="text-gray-700 text-sm mb-6">
+              Estás a punto de abandonar esta sesión de auditoría. ¿Estás seguro?
+            </p>
+            <div className="flex justify-end gap-4">
+              <button onClick={() => setExitPromptVisible(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setExitPromptVisible(false);
+                  window.removeEventListener('beforeunload', () => {});
+                  window.location.href = '/';
+                }}
+                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900"
+              >
+                Salir de la página
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
