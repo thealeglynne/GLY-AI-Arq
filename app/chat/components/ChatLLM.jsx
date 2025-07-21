@@ -53,7 +53,12 @@ export default function ChatConConfiguracion() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
+    
   }, []);
 
   useEffect(() => {
