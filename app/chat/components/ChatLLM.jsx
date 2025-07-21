@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
 import { getCurrentUser, subscribeToAuthState } from '../../lib/supabaseClient';
 import GuardarAuditoria from '../components/saveChat';
 import ListaAuditorias from '../components/ListaAuditorias';
-
 import ModalInicio from '../components/AnalisisProcesos';
 
 export default function ChatConConfiguracion() {
@@ -21,10 +20,8 @@ export default function ChatConConfiguracion() {
   const [exitPromptVisible, setExitPromptVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoginPopupVisible, setIsLoginPopupVisible] = useState(false);
-  const [empresaInfo, setEmpresaInfo] = useState({
-    nombreEmpresa: '',
-    rol: ''
-  });
+  const [empresaInfo, setEmpresaInfo] = useState({ nombreEmpresa: '', rol: '' });
+  const [showFloatingAlert, setShowFloatingAlert] = useState(false);
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
   const API_URL = 'https://gly-ai-brain.onrender.com';
@@ -45,17 +42,13 @@ export default function ChatConConfiguracion() {
     const fetchUser = async () => {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-      if (!currentUser) {
-        setIsLoginPopupVisible(true);
-      }
+      if (!currentUser) setIsLoginPopupVisible(true);
     };
     fetchUser();
 
     const subscription = subscribeToAuthState((event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        setIsLoginPopupVisible(false);
-      }
+      if (session?.user) setIsLoginPopupVisible(false);
     });
 
     return () => {
@@ -63,7 +56,6 @@ export default function ChatConConfiguracion() {
         subscription.unsubscribe();
       }
     };
-    
   }, []);
 
   useEffect(() => {
@@ -161,6 +153,12 @@ export default function ChatConConfiguracion() {
       }
       const data = await sendRequest(input);
       const respuesta = data.respuesta || data.message || "No se pudo procesar la respuesta";
+
+      if (respuesta.toLowerCase().includes('generar auditoria')) {
+        setShowFloatingAlert(true);
+        setTimeout(() => setShowFloatingAlert(false), 10000);
+      }
+
       setMessages(prev => [...prev, { from: 'ia', text: respuesta }]);
     } catch (error) {
       const errorMsg = error.name === 'AbortError'
@@ -199,24 +197,22 @@ export default function ChatConConfiguracion() {
     }
   };
 
+  const triggerAuditCommand = () => {
+    setInput('generar auditoria');
+    setShowFloatingAlert(false);
+    setTimeout(() => handleSend(), 100);
+  };
+
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-white">
       <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[90vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
-           {/* Modal de inicio para capturar info de empresa */}
-           <ModalInicio 
-  onComplete={(info) => {
-    setEmpresaInfo(info);
-  }} 
-/>
-
-        {/* Lista de Auditorías */}
+        <ModalInicio onComplete={(info) => setEmpresaInfo(info)} />
         <div className="hidden lg:block lg:w-[30%] h-full bg-white border-r border-gray-200 overflow-y-auto p-4">
           <ListaAuditorias />
         </div>
-  
+
         {/* Chat principal */}
         <div className="flex flex-col flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-white h-full">
-          {/* Mensajes */}
           <div className="overflow-y-auto space-y-4 flex-1 pr-1">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -238,7 +234,7 @@ export default function ChatConConfiguracion() {
             )}
             <div ref={messagesEndRef} />
           </div>
-  
+
           {/* Input */}
           <div className="mt-4 sm:mt-6">
             <div className="flex items-center gap-2 sm:gap-3 border border-gray-300 bg-gray-50 rounded-full shadow-md p-2 sm:p-3">
@@ -265,7 +261,28 @@ export default function ChatConConfiguracion() {
         </div>
       </div>
 
-      {/* Audit Confirmation Modal */}
+      {/* Floating alert */}
+      <AnimatePresence>
+        {showFloatingAlert && (
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-5 right-5 bg-black text-white rounded-xl shadow-lg px-4 py-3 z-[1000] flex items-center gap-4"
+          >
+            <span className="text-sm">Auditoría lista para generar</span>
+            <button
+              onClick={triggerAuditCommand}
+              className="bg-white text-black text-xs px-3 py-1 rounded-full hover:bg-gray-200 transition"
+            >
+              Generar ahora
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Alert modal */}
       {isAlertOpen && (
         <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
           <motion.div
@@ -287,7 +304,7 @@ export default function ChatConConfiguracion() {
         </div>
       )}
 
-      {/* Audit Modal */}
+      {/* Modal propuesta técnica */}
       {isModalOpen && (
         <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
           <motion.div
@@ -320,7 +337,7 @@ export default function ChatConConfiguracion() {
         </div>
       )}
 
-      {/* Exit Prompt Modal */}
+      {/* Confirmación de salida */}
       {exitPromptVisible && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1000]">
           <motion.div
