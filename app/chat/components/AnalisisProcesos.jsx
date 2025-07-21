@@ -50,7 +50,7 @@ export default function ModalInicio({ onComplete }) {
                   lineHeight: '1.3',
                 }}
               >
-                ¡Hola! Soy <span className="text-black">GLY-IA</span>
+                ¡Hola!  soy <span className="text-black">Tu Asesor de Estrategia IA</span>
               </motion.h2>
 
               <Image

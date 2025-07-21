@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { FaGoogle } from 'react-icons/fa';
 
 export function LoginPopup({ visible, onClose }) {
   const router = useRouter();
@@ -79,7 +80,7 @@ export function LoginPopup({ visible, onClose }) {
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-black text-white text-sm font-semibold shadow-md hover:bg-gray-900 transition"
             >
-              <img src="/google.png" alt="Google" className="w-4 h-4" />
+              <FaGoogle className="w-4 h-4" />
               Continuar con Google
             </button>
           </motion.div>

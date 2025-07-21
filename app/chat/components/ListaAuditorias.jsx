@@ -55,7 +55,7 @@ export default function AuditoriasFullScreen() {
 
   return (
     <div className="w-full h-screen bg-white text-gray-800 p-6 overflow-y-auto">
-      <h2 className="text-2xl font-semibold mb-8">📂 Mis Auditorías</h2>
+      <h2 className="text-2xl font-semibold mb-8">Mis Auditorías</h2>
 
       {auditorias.length === 0 ? (
         <p className="text-sm text-gray-500">Aún no tienes auditorías registradas.</p>
@@ -118,7 +118,7 @@ export default function AuditoriasFullScreen() {
               </button>
 
               <h3 className="text-lg font-bold mb-4">
-                📝 Auditoría del {new Date(selectedAudit.created_at).toLocaleString()}
+                Auditoría del {new Date(selectedAudit.created_at).toLocaleString()}
               </h3>
 
               <pre className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">

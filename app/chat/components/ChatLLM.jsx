@@ -7,6 +7,8 @@ import { getCurrentUser, subscribeToAuthState } from '../../lib/supabaseClient';
 import GuardarAuditoria from '../components/saveChat';
 import ListaAuditorias from '../components/ListaAuditorias';
 
+import ModalInicio from '../components/AnalisisProcesos';
+
 export default function ChatConConfiguracion() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
@@ -19,11 +21,14 @@ export default function ChatConConfiguracion() {
   const [exitPromptVisible, setExitPromptVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoginPopupVisible, setIsLoginPopupVisible] = useState(false);
-
+  const [empresaInfo, setEmpresaInfo] = useState({
+    nombreEmpresa: '',
+    rol: ''
+  });
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
   const API_URL = 'https://gly-ai-brain.onrender.com';
-  const REQUEST_TIMEOUT = 30000;
+  const REQUEST_TIMEOUT = 40000;
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -128,7 +133,10 @@ export default function ChatConConfiguracion() {
         rol: 'Auditor',
         temperatura: 0.7,
         estilo: 'Formal',
-        config: {},
+        config: {
+          empresa: empresaInfo.nombreEmpresa,
+          rolUsuario: empresaInfo.rol
+        },
       }),
       signal: controller.signal,
     });
@@ -194,7 +202,15 @@ export default function ChatConConfiguracion() {
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-white">
       <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[90vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
-        
+           {/* Modal de inicio para capturar info de empresa */}
+      {isLoginPopupVisible && (
+        <ModalInicio 
+          onComplete={(info) => {
+            setEmpresaInfo(info);
+            setIsLoginPopupVisible(false);
+          }} 
+        />
+      )}
         {/* Lista de Auditorías */}
         <div className="hidden lg:block lg:w-[30%] h-full bg-white border-r border-gray-200 overflow-y-auto p-4">
           <ListaAuditorias />
