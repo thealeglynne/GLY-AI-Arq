@@ -75,7 +75,10 @@ export default function ChatConConfiguracion() {
               rol: 'Auditor',
               temperatura: 0.7,
               estilo: 'Formal',
-              config: {},
+              config: {
+                empresa: empresaInfo.nombreEmpresa || '',
+                rolUsuario: empresaInfo.rol || '',
+              },
             }),
             signal: controller.signal,
           });
