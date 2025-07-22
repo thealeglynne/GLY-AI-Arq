@@ -205,7 +205,7 @@ export default function ChatConConfiguracion() {
 
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-white">
-      <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[90vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
+      <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[83vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
         <ModalInicio onComplete={(info) => setEmpresaInfo(info)} />
         <div className="hidden lg:block lg:w-[30%] h-full bg-white border-r border-gray-200 overflow-y-auto p-4">
           <ListaAuditorias />
