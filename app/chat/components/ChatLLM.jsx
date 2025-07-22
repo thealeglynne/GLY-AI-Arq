@@ -15,17 +15,19 @@ export default function ChatConConfiguracion() {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [auditContent, setAuditContent] = useState('');
-  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [exitPromptVisible, setExitPromptVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoginPopupVisible, setIsLoginPopupVisible] = useState(false);
   const [empresaInfo, setEmpresaInfo] = useState({ nombreEmpresa: '', rol: '' });
-  const [showFloatingAlert, setShowFloatingAlert] = useState(false);
+  const [tokenCount, setTokenCount] = useState(0);
+  const [isTokenWarningOpen, setIsTokenWarningOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
   const API_URL = 'https://gly-ai-brain.onrender.com';
   const REQUEST_TIMEOUT = 40000;
+  const MAX_TOKENS = 120; // From /estado-tokens endpoint
+  const TOKEN_WARNING_THRESHOLD = MAX_TOKENS * 0.7; // 84 tokens
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -59,7 +61,7 @@ export default function ChatConConfiguracion() {
   }, []);
 
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && empresaInfo.nombreEmpresa && empresaInfo.rol) {
       const fetchInitialMessage = async () => {
         setIsLoading(true);
         setErrorMessage('');
@@ -85,9 +87,16 @@ export default function ChatConConfiguracion() {
 
           clearTimeout(timeoutId);
 
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`HTTP error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
+          }
+
           const data = await response.json();
-          const respuesta = data.respuesta || data.message || "No se pudo procesar la respuesta";
+          const respuesta = data.respuesta || data.message || 'No se pudo procesar la respuesta';
           setMessages([{ from: 'ia', text: respuesta }]);
+          setTokenCount(prev => prev + 20); // Simulate IA response token usage
+          checkTokenLimit();
         } catch (error) {
           const errorMsg = error.name === 'AbortError'
             ? 'La solicitud inicial tardó demasiado. Por favor, intenta recargar la página.'
@@ -101,7 +110,7 @@ export default function ChatConConfiguracion() {
 
       fetchInitialMessage();
     }
-  }, []);
+  }, [empresaInfo]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -117,6 +126,27 @@ export default function ChatConConfiguracion() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [messages]);
 
+  const checkTokenLimit = () => {
+    if (tokenCount >= TOKEN_WARNING_THRESHOLD && !isTokenWarningOpen) {
+      setIsTokenWarningOpen(true);
+    }
+  };
+
+  const fetchTokenStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/estado-tokens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      // Assuming the backend returns current token usage; adjust as needed
+      // For now, we rely on local tokenCount
+    } catch (error) {
+      console.error('Error fetching token status:', error.message);
+    }
+  };
+
   const sendRequest = async (query) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -129,14 +159,17 @@ export default function ChatConConfiguracion() {
         temperatura: 0.7,
         estilo: 'Formal',
         config: {
-          empresa: empresaInfo.nombreEmpresa,
-          rolUsuario: empresaInfo.rol
+          empresa: empresaInfo.nombreEmpresa || '',
+          rolUsuario: empresaInfo.rol || '',
         },
       }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`HTTP error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
+    }
     return await response.json();
   };
 
@@ -147,22 +180,20 @@ export default function ChatConConfiguracion() {
     setInput('');
     setIsLoading(true);
     setErrorMessage('');
+    setTokenCount(prev => prev + 10); // Simulate user message token usage
+    checkTokenLimit();
 
     try {
       if (input.trim().toLowerCase() === 'generar auditoria') {
-        setIsAlertOpen(true);
-        setIsLoading(false);
+        await handleGenerateAudit();
         return;
       }
       const data = await sendRequest(input);
-      const respuesta = data.respuesta || data.message || "No se pudo procesar la respuesta";
-
-      if (respuesta.toLowerCase().includes('generar auditoria')) {
-        setShowFloatingAlert(true);
-        setTimeout(() => setShowFloatingAlert(false), 10000);
-      }
-
+      const respuesta = data.respuesta || data.message || 'No se pudo procesar la respuesta';
       setMessages(prev => [...prev, { from: 'ia', text: respuesta }]);
+      setTokenCount(prev => prev + 20); // Simulate IA response token usage
+      checkTokenLimit();
+      await fetchTokenStatus(); // Optionally fetch real token status
     } catch (error) {
       const errorMsg = error.name === 'AbortError'
         ? 'La solicitud tardó demasiado.'
@@ -175,7 +206,6 @@ export default function ChatConConfiguracion() {
   };
 
   const handleGenerateAudit = async () => {
-    setIsAlertOpen(false);
     setIsLoading(true);
     try {
       const data = await sendRequest('generar auditoria');
@@ -183,11 +213,10 @@ export default function ChatConConfiguracion() {
         setAuditContent(data.propuesta);
         setIsModalOpen(true);
         setMessages(prev => [...prev, { from: 'ia', text: data.respuesta }]);
+        setTokenCount(prev => prev + 20); // Simulate IA response token usage
+        checkTokenLimit();
       } else {
-        setMessages(prev => [...prev, {
-          from: 'ia',
-          text: '⚠️ No se pudo generar la auditoría.',
-        }]);
+        setMessages(prev => [...prev, { from: 'ia', text: '⚠️ No se pudo generar la auditoría.' }]);
       }
     } catch (error) {
       const errorMsg = error.name === 'AbortError'
@@ -202,7 +231,6 @@ export default function ChatConConfiguracion() {
 
   const triggerAuditCommand = () => {
     setInput('generar auditoria');
-    setShowFloatingAlert(false);
     setTimeout(() => handleSend(), 100);
   };
 
@@ -264,49 +292,51 @@ export default function ChatConConfiguracion() {
         </div>
       </div>
 
-      {/* Floating alert */}
+      {/* Token warning modal */}
       <AnimatePresence>
-        {showFloatingAlert && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            transition={{ duration: 0.3 }}
-            className="fixed top-5 right-5 bg-black text-white rounded-xl shadow-lg px-4 py-3 z-[1000] flex items-center gap-4"
-          >
-            <span className="text-sm">Auditoría lista para generar</span>
-            <button
-              onClick={triggerAuditCommand}
-              className="bg-white text-black text-xs px-3 py-1 rounded-full hover:bg-gray-200 transition"
-            >
-              Generar ahora
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Alert modal */}
-      {isAlertOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+        {isTokenWarningOpen && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
+            className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50"
           >
-            <button onClick={() => setIsAlertOpen(false)} className="absolute top-4 right-4 text-gray-600">
-              <FaTimes size={20} />
-            </button>
-            <h2 className="text-xl font-bold mb-4">¿Listo para generar tu informe técnico?</h2>
-            <p className="text-sm text-gray-700 mb-6">Cuanto más contexto compartas sobre tu empresa, mejor podrá GLY-AI analizar tus procesos, detectar oportunidades y proponer soluciones adaptadas a tu realidad.
-Este informe no es genérico: es el primer paso hacia tu transformación empresarial impulsada por IA.</p>
-            <div className="flex justify-end gap-4">
-              <button onClick={() => setIsAlertOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancelar</button>
-              <button onClick={handleGenerateAudit} className="px-4 py-2 bg-black text-white rounded-lg">Generar</button>
-            </div>
+            <motion.div
+              className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
+            >
+              <button
+                onClick={() => setIsTokenWarningOpen(false)}
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+              >
+                <FaTimes size={20} />
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-gray-800">Advertencia de Límite de Tokens</h2>
+              <p className="text-sm text-gray-700 mb-6">
+                Has alcanzado el 70% de tu cuota de tokens por chat ({tokenCount}/{MAX_TOKENS}). Te recomendamos
+                generar una auditoría o finalizar la sesión para optimizar tu uso.
+              </p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setIsTokenWarningOpen(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                >
+                  Continuar
+                </button>
+                <button
+                  onClick={() => {
+                    setIsTokenWarningOpen(false);
+                    triggerAuditCommand();
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900"
+                >
+                  Generar Auditoría
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Modal propuesta técnica */}
       {isModalOpen && (
@@ -321,9 +351,7 @@ Este informe no es genérico: es el primer paso hacia tu transformación empresa
               <FaTimes size={20} />
             </button>
             <h2 className="text-2xl font-bold mb-4">Informe Técnico Consultivo</h2>
-            <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {auditContent}
-            </div>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{auditContent}</div>
             <div className="mt-6 flex justify-end gap-4">
               {user ? (
                 <GuardarAuditoria auditContent={auditContent} onSave={() => setIsModalOpen(false)} />
@@ -335,7 +363,9 @@ Este informe no es genérico: es el primer paso hacia tu transformación empresa
                   Iniciar Sesión para Guardar
                 </button>
               )}
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">Cerrar</button>
+              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-lg">
+                Cerrar
+              </button>
             </div>
           </motion.div>
         </div>
@@ -350,7 +380,10 @@ Este informe no es genérico: es el primer paso hacia tu transformación empresa
             transition={{ duration: 0.3 }}
             className="bg-white rounded-3xl shadow-xl max-w-md w-full mx-4 p-6 relative"
           >
-            <button onClick={() => setExitPromptVisible(false)} className="absolute top-4 right-4 text-gray-600 hover:text-gray-800">
+            <button
+              onClick={() => setExitPromptVisible(false)}
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+            >
               <FaTimes size={20} />
             </button>
             <h2 className="text-xl font-bold mb-4 text-gray-800">¿Deseas salir?</h2>
@@ -358,7 +391,10 @@ Este informe no es genérico: es el primer paso hacia tu transformación empresa
               Estás a punto de abandonar esta sesión de auditoría. ¿Estás seguro?
             </p>
             <div className="flex justify-end gap-4">
-              <button onClick={() => setExitPromptVisible(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+              <button
+                onClick={() => setExitPromptVisible(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
                 Cancelar
               </button>
               <button
