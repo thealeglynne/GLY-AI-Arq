@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentUser, supabase, subscribeToAuthState } from '../../lib/supabaseClient';
 import { X } from 'lucide-react';
-import { FaTrash } from 'react-icons/fa'; // Import FaTrash for delete button
+import { FaTrash } from 'react-icons/fa';
+import PreguntasSugeridas from '../components/preguntasPredefinidas'; // Asegúrate que la ruta sea correcta
 
 export default function AuditoriasFullScreen() {
   const [user, setUser] = useState(null);
@@ -42,11 +43,10 @@ export default function AuditoriasFullScreen() {
         .from('auditorias')
         .delete()
         .eq('id', auditId)
-        .eq('user_id', user.id); // Ensure only the user's audit is deleted
+        .eq('user_id', user.id);
       if (error) throw error;
-      // Update state to remove the deleted audit
       setAuditorias((prev) => prev.filter((audit) => audit.id !== auditId));
-      if (selectedAudit?.id === auditId) setSelectedAudit(null); // Close modal if open
+      if (selectedAudit?.id === auditId) setSelectedAudit(null);
     } catch (error) {
       console.error('Error deleting audit:', error.message);
       alert('No se pudo eliminar la auditoría: ' + error.message);
@@ -54,47 +54,56 @@ export default function AuditoriasFullScreen() {
   };
 
   return (
-    <div className="w-full h-screen bg-white text-gray-800 p-6 overflow-y-auto">
-      <h2 className="text-2xl font-semibold mb-8">Mis Auditorías</h2>
+    <div className="w-full h-screen flex flex-col bg-white text-gray-800 overflow-hidden">
+      {/* 🔝 Parte superior - Auditorías */}
+      <div className="h-1/2 w-full p-6 overflow-y-auto border-b border-gray-200">
+        <h2 className="text-2xl font-semibold mb-6">Mis Auditorías</h2>
 
-      {auditorias.length === 0 ? (
-        <p className="text-sm text-gray-500">Aún no tienes auditorías registradas.</p>
-      ) : (
-        <div className="flex flex-col gap-4 w-[90%] mx-auto">
-          {auditorias.map((a) => (
-            <motion.div
-              key={a.id}
-              onClick={() => setSelectedAudit(a)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="cursor-pointer bg-gray-50 border border-gray-200 hover:border-black rounded-xl p-4 shadow-sm transition-all flex justify-between items-center"
-            >
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-700 mb-1">
-                  {new Date(a.created_at).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 line-clamp-2">
-                  {typeof a.audit_content === 'string'
-                    ? a.audit_content.slice(0, 120)
-                    : JSON.stringify(a.audit_content).slice(0, 120)}...
-                </p>
-              </div>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent triggering the audit selection
-                  handleDelete(a.id);
-                }}
-                className="text-gray-500 hover:text-red-600 transition p-2"
+        {auditorias.length === 0 ? (
+          <p className="text-sm text-gray-500">Aún no tienes auditorías registradas.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {auditorias.map((a) => (
+              <motion.div
+                key={a.id}
+                onClick={() => setSelectedAudit(a)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="cursor-pointer bg-gray-50 border border-gray-200 hover:border-black rounded-xl p-4 shadow-sm transition-all flex justify-between items-center"
               >
-                <FaTrash size={16} />
-              </motion.button>
-            </motion.div>
-          ))}
-        </div>
-      )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    {new Date(a.created_at).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 line-clamp-2">
+                    {typeof a.audit_content === 'string'
+                      ? a.audit_content.slice(0, 120)
+                      : JSON.stringify(a.audit_content).slice(0, 120)}...
+                  </p>
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(a.id);
+                  }}
+                  className="text-gray-500 hover:text-red-600 transition p-2"
+                >
+                  <FaTrash size={16} />
+                </motion.button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* 🪟 Modal con el detalle */}
+      {/* 🔽 Parte inferior - Preguntas sugeridas */}
+      <div className="h-1/2 w-full p-6 overflow-y-auto">
+        <h2 className="text-2xl font-semibold mb-6"></h2>
+        <PreguntasSugeridas onSeleccionar={(pregunta) => console.log('Seleccionaste:', pregunta)} />
+      </div>
+
+      {/* 🪟 Modal de detalle */}
       <AnimatePresence>
         {selectedAudit && (
           <motion.div
