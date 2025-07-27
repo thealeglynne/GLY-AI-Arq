@@ -6,6 +6,7 @@ import { getCurrentUser, supabase, subscribeToAuthState } from '../../lib/supaba
 import { X } from 'lucide-react';
 import { FaTrash, FaListUl } from 'react-icons/fa';
 import PreguntasSugeridas from '../components/preguntasPredefinidas';
+import Perfil from '../components/perfil'
 
 export default function AuditoriasFullScreen() {
   const [user, setUser] = useState(null);
@@ -128,7 +129,7 @@ export default function AuditoriasFullScreen() {
           >
             <FaListUl size={18} />
           </button>
-
+<Perfil />
           {/* Componente de preguntas predefinidas */}
           <PreguntasSugeridas 
             onSeleccionar={(pregunta) => console.log('Seleccionaste:', pregunta)}
