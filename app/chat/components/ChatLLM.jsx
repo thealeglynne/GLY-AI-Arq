@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPaperPlane, FaTimes } from 'react-icons/fa';
+import { FaPaperPlane, FaTimes, FaListUl } from 'react-icons/fa';
 import { getCurrentUser, subscribeToAuthState } from '../../lib/supabaseClient';
 import GuardarAuditoria from '../components/saveChat';
 import ListaAuditorias from '../components/ListaAuditorias';
@@ -22,12 +22,13 @@ export default function ChatConConfiguracion() {
   const [empresaInfo, setEmpresaInfo] = useState({ nombreEmpresa: '', rol: '' });
   const [tokenCount, setTokenCount] = useState(0);
   const [isTokenWarningOpen, setIsTokenWarningOpen] = useState(false);
+  const [showMobileAudits, setShowMobileAudits] = useState(false); // 📱 Control del menú móvil
   const messagesEndRef = useRef(null);
   const isMobile = windowWidth < 640;
   const API_URL = 'https://gly-ai-brain.onrender.com';
   const REQUEST_TIMEOUT = 40000;
-  const MAX_TOKENS = 120; // From /estado-tokens endpoint
-  const TOKEN_WARNING_THRESHOLD = MAX_TOKENS * 0.7; // 84 tokens
+  const MAX_TOKENS = 120;
+  const TOKEN_WARNING_THRESHOLD = MAX_TOKENS * 0.7;
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -95,7 +96,7 @@ export default function ChatConConfiguracion() {
           const data = await response.json();
           const respuesta = data.respuesta || data.message || 'No se pudo procesar la respuesta';
           setMessages([{ from: 'ia', text: respuesta }]);
-          setTokenCount(prev => prev + 20); // Simulate IA response token usage
+          setTokenCount(prev => prev + 20);
           checkTokenLimit();
         } catch (error) {
           const errorMsg = error.name === 'AbortError'
@@ -127,7 +128,10 @@ export default function ChatConConfiguracion() {
   }, [messages]);
 
   const checkTokenLimit = () => {
-    if (tokenCount >= TOKEN_WARNING_THRESHOLD && !isTokenWarningOpen) {
+    const userMsgs = messages.filter(m => m.from === 'user').length;
+    const iaMsgs = messages.filter(m => m.from === 'ia').length;
+
+    if (userMsgs >= 12 && iaMsgs >= 11 && !isTokenWarningOpen) {
       setIsTokenWarningOpen(true);
     }
   };
@@ -139,9 +143,7 @@ export default function ChatConConfiguracion() {
         headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      // Assuming the backend returns current token usage; adjust as needed
-      // For now, we rely on local tokenCount
+      await response.json();
     } catch (error) {
       console.error('Error fetching token status:', error.message);
     }
@@ -168,6 +170,10 @@ export default function ChatConConfiguracion() {
     clearTimeout(timeoutId);
     if (!response.ok) {
       const errorData = await response.json();
+      // Aquí está el cambio específico para el error 402
+      if (response.status === 402) {
+        throw new Error("Espera unos segundos, servidor sobrecargado por consultas paralelas");
+      }
       throw new Error(`HTTP error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
     }
     return await response.json();
@@ -180,7 +186,7 @@ export default function ChatConConfiguracion() {
     setInput('');
     setIsLoading(true);
     setErrorMessage('');
-    setTokenCount(prev => prev + 10); // Simulate user message token usage
+    setTokenCount(prev => prev + 10);
     checkTokenLimit();
 
     try {
@@ -191,9 +197,9 @@ export default function ChatConConfiguracion() {
       const data = await sendRequest(input);
       const respuesta = data.respuesta || data.message || 'No se pudo procesar la respuesta';
       setMessages(prev => [...prev, { from: 'ia', text: respuesta }]);
-      setTokenCount(prev => prev + 20); // Simulate IA response token usage
+      setTokenCount(prev => prev + 20);
       checkTokenLimit();
-      await fetchTokenStatus(); // Optionally fetch real token status
+      await fetchTokenStatus();
     } catch (error) {
       const errorMsg = error.name === 'AbortError'
         ? 'La solicitud tardó demasiado.'
@@ -213,7 +219,7 @@ export default function ChatConConfiguracion() {
         setAuditContent(data.propuesta);
         setIsModalOpen(true);
         setMessages(prev => [...prev, { from: 'ia', text: data.respuesta }]);
-        setTokenCount(prev => prev + 20); // Simulate IA response token usage
+        setTokenCount(prev => prev + 20);
         checkTokenLimit();
       } else {
         setMessages(prev => [...prev, { from: 'ia', text: '⚠️ No se pudo generar la auditoría.' }]);
@@ -229,18 +235,45 @@ export default function ChatConConfiguracion() {
     }
   };
 
-  const triggerAuditCommand = () => {
-    setInput('generar auditoria');
-    setTimeout(() => handleSend(), 100);
+  const triggerAuditCommand = async () => {
+    await handleGenerateAudit();
   };
 
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-white">
-      <div className="w-[95%] sm:w-full md:w-[90%] lg:w-[80%] h-[80vh] md:h-[83vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
+      <div className="w-[95%] sm:w-full md:w-[100%] lg:w-[100%] h-[90vh] md:h-[95vh] bg-gray-100 rounded-xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-gray-200">
         <ModalInicio onComplete={(info) => setEmpresaInfo(info)} />
+
+        {/* 📱 Mobile: botón para abrir/cerrar auditorías */}
+        <div className="block lg:hidden w-full bg-white border-b border-gray-200 p-3 flex justify-between items-center">
+          <span className="font-semibold text-gray-700">Mis Auditorías</span>
+          <button
+            onClick={() => setShowMobileAudits(!showMobileAudits)}
+            className="p-2 bg-black text-white rounded-lg hover:bg-gray-900 transition"
+          >
+            <FaListUl size={16} />
+          </button>
+        </div>
+
+        {/* Panel lateral en desktop */}
         <div className="hidden lg:block lg:w-[30%] h-full bg-white border-r border-gray-200 overflow-y-auto p-4">
           <ListaAuditorias />
         </div>
+
+        {/* 📱 Menú desplegable móvil actualizado */}
+        <AnimatePresence>
+          {showMobileAudits && (
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="block lg:hidden bg-white border-b border-gray-200 max-h-[80vh] overflow-y-auto p-4"
+            >
+              <ListaAuditorias isMobile={true} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Chat principal */}
         <div className="flex flex-col flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-white h-full">
@@ -311,10 +344,10 @@ export default function ChatConConfiguracion() {
               >
                 <FaTimes size={20} />
               </button>
-              <h2 className="text-xl font-bold mb-4 text-gray-800">Advertencia de Límite de Tokens</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-800">Generar Auditoría</h2>
               <p className="text-sm text-gray-700 mb-6">
-                Has alcanzado el 70% de tu cuota de tokens por chat ({tokenCount}/{MAX_TOKENS}). Te recomendamos
-                generar una auditoría o finalizar la sesión para optimizar tu uso.
+                Has alcanzado el número recomendado de interacciones (12 mensajes tuyos y 11 de la IA).
+                Te recomendamos generar una auditoría ahora para consolidar el análisis.
               </p>
               <div className="flex justify-end gap-4">
                 <button
@@ -324,9 +357,9 @@ export default function ChatConConfiguracion() {
                   Continuar
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setIsTokenWarningOpen(false);
-                    triggerAuditCommand();
+                    await triggerAuditCommand();
                   }}
                   className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900"
                 >
